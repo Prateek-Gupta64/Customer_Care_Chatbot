@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Customer Support</title>
+<style>
+:root{--bg:#e9eef3;--ink:#1c2733;--brand:#0f5c8c;--brand-d:#0b4468;--line:#d5dee7;--muted:#6b7a89}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);display:flex;justify-content:center}
+.app{width:100%;max-width:680px;height:100%;display:flex;flex-direction:column;background:#fff;box-shadow:0 0 30px rgba(15,50,80,.12)}
+header{padding:14px 18px;background:var(--brand);color:#fff}
+header h1{font-size:1.05rem;font-weight:600}
+header p{font-size:.78rem;opacity:.8;margin-top:2px}
+#log{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;background:#f6f9fb}
+.msg{max-width:80%;padding:9px 13px;border-radius:14px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word;font-size:.94rem}
+.me{align-self:flex-end;background:var(--brand);color:#fff;border-bottom-right-radius:3px}
+.bot{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:3px}
+.err{align-self:center;background:#fdecee;color:#8a1c2b;border:1px solid #f3b9c0;font-size:.84rem}
+.typing{color:var(--muted);font-style:italic}
+#chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px;background:#f6f9fb}
+#chips button{border:1px solid var(--brand);background:#fff;color:var(--brand);border-radius:16px;padding:6px 12px;font:inherit;font-size:.82rem;cursor:pointer}
+#chips button:hover{background:var(--brand);color:#fff}
+form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;max-height:110px;outline:none}
+textarea:focus{border-color:var(--brand)}
+form button{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:0 20px;font:inherit;font-weight:600;cursor:pointer}
+form button:hover{background:var(--brand-d)}
+form button:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header><h1>Customer Support</h1><p>Ask about orders, delivery, returns and payments</p></header>
+  <div id="log" aria-live="polite"></div>
+  <div id="chips"></div>
+  <form id="form">
+    <textarea id="input" rows="1" placeholder="Type your question…"></textarea>
+    <button id="send" type="submit">Send</button>
+  </form>
+</div>
+<script>
+// Change this to your deployed backend URL after hosting it
+const API_URL = "http://localhost:3000";
+
+const log = document.getElementById("log"), input = document.getElementById("input"), send = document.getElementById("send");
+let history = [];
+
+function add(text, cls){
+  const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text;
+  log.appendChild(d); log.scrollTop = log.scrollHeight; return d;
+}
+add("Hi! I'm the support assistant. How can I help you today?", "bot");
+
+const chips = document.getElementById("chips");
+["Where is my order?", "How do I return an item?", "What payment methods do you accept?"].forEach(q => {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = q;
+  b.onclick = () => { input.value = q; form.requestSubmit(); }; chips.appendChild(b);
+});
+
+const form = document.getElementById("form");
+form.addEventListener("submit", async e => {
+  e.preventDefault();
+  const text = input.value.trim(); if(!text) return;
+  chips.style.display = "none";
+  input.value = ""; input.style.height = "auto";
+  add(text, "me"); history.push({ role: "user", text });
+  send.disabled = true;
+  const t = add("typing…", "bot typing");
+  try {
+    const res = await fetch(API_URL + "/chat", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: history })
+    });
+    const data = await res.json();
+    t.remove();
+    if(!res.ok) throw new Error(data.error || "Something went wrong.");
+    add(data.reply, "bot"); history.push({ role: "model", text: data.reply });
+  } catch(err){
+    t.remove(); history.pop();
+    add(err.message === "Failed to fetch" ? "Can't reach the support server. Please try again shortly." : err.message, "err");
+  }
+  send.disabled = false; input.focus();
+});
+input.addEventListener("keydown", e => { if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); form.requestSubmit(); } });
+input.addEventListener("input", () => { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 110) + "px"; });
+</script>
+</body>
+</html>
