@@ -2,11 +2,6 @@
 
 An AI customer support chatbot powered by Google Gemini. Customers open a simple web page and ask questions about orders, delivery, returns and payments. The bot answers **only from your own FAQ file**, so it never makes up policies.
 
-## Screenshots
-
-| Greeting and FAQ answers | Handling questions it can't answer |
-|---|---|
-| ![Chat 1](docs/screenshots/chat-1.png) | ![Chat 2](docs/screenshots/chat-2.png) |
 
 ## Features
 
